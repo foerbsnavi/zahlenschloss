@@ -1,0 +1,164 @@
+<style>
+    .canvas-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    #canvas {
+        border: 4px solid var(--accent-2);
+        margin-bottom: 10px;
+        touch-action: none;
+    }
+    #unlockButton {
+        padding: 8px 16px;
+        font-size: 16px;
+    }
+    #ergebnis{
+        margin:8px;
+    }
+</style>
+<div class="canvas-container">
+    <canvas id="canvas" width="280" height="280"></canvas>
+    <button id="unlockButton">Öffnen</button>
+    <div id="ergebnis"></div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+  const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const outerRadius = 126;
+    const innerRadius = 80;
+    let angle1 = 0;
+    let angle2 = 0;
+    let startAngle1 = 0;
+    let startAngle2 = 0;
+    let dragging = false;
+    let wheelSelected = 0;
+    const combination = [5, 15];
+    const center = { x: canvas.width / 2, y: canvas.height / 2 };
+
+  function getPos(evt) {
+      var rect = canvas.getBoundingClientRect();
+      if (evt.touches) {
+          return {
+              x: evt.touches[0].clientX - rect.left,
+              y: evt.touches[0].clientY - rect.top
+          };
+      } else {
+          return {
+              x: evt.clientX - rect.left,
+              y: evt.clientY - rect.top
+          };
+      }
+  }
+
+  function getAngle(x, y) {
+      var dx = x - center.x;
+      var dy = y - center.y;
+      return Math.atan2(dy, dx);
+  }
+      function drawLock() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, outerRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, innerRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.font = "14px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (let i = 0; i < 24; i++) {
+        let angle = (Math.PI * 2 / 24) * i;
+        ctx.save();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(angle + angle1);
+        let textPosition = outerRadius - 15; 
+        ctx.fillText(i + 1, textPosition, 0);
+        ctx.beginPath();
+        ctx.moveTo(outerRadius - 5, 0); 
+        ctx.lineTo(outerRadius, 0); 
+        ctx.stroke();
+        ctx.restore();
+        ctx.save();
+        ctx.translate(center.x, center.y);
+        ctx.rotate(angle + angle2);
+        textPosition = innerRadius - 15; 
+        ctx.fillText(i + 1, textPosition, 0);
+        ctx.beginPath();
+        ctx.moveTo(innerRadius - 5, 0); 
+        ctx.lineTo(innerRadius, 0); 
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y - outerRadius - 5);
+      ctx.lineTo(center.x, center.y - outerRadius - 15);
+      ctx.stroke();
+    }
+    drawLock();
+    function handleStart(evt) {
+      evt.preventDefault();
+      let pos = getPos(evt);
+      let distance = Math.sqrt(Math.pow(pos.x - center.x, 2) + Math.pow(pos.y - center.y, 2));
+      if (distance < outerRadius && distance > innerRadius) {
+          dragging = true;
+          wheelSelected = 1;
+          startAngle1 = getAngle(pos.x, pos.y) - angle1;
+      } else if (distance <= innerRadius) {
+          dragging = true;
+          wheelSelected = 2;
+          startAngle2 = getAngle(pos.x, pos.y) - angle2;
+      }
+  }
+
+  function handleMove(evt) {
+      evt.preventDefault();
+      if (!dragging) return;
+      let pos = getPos(evt);
+      let currentAngle = getAngle(pos.x, pos.y);
+
+      if (wheelSelected === 1) {
+          angle1 = currentAngle - startAngle1;
+      } else if (wheelSelected === 2) {
+          angle2 = currentAngle - startAngle2;
+      }
+      drawLock();
+  }
+
+  function handleEnd(evt) {
+      evt.preventDefault();
+      dragging = false;
+  }
+
+  canvas.addEventListener('mousedown', handleStart);
+  canvas.addEventListener('mousemove', handleMove);
+  canvas.addEventListener('mouseup', handleEnd);
+  canvas.addEventListener('mouseleave', handleEnd);
+
+  canvas.addEventListener('touchstart', handleStart, false);
+  canvas.addEventListener('touchmove', handleMove, false);
+  canvas.addEventListener('touchend', handleEnd, false);
+  canvas.addEventListener('touchcancel', handleEnd, false);
+    
+    document.getElementById('unlockButton').addEventListener('click', function() {
+    let angle1Deg = ((angle1 * (180 / Math.PI) + 360) % 360);
+    let angle2Deg = ((angle2 * (180 / Math.PI) + 360) % 360);
+      let position1 = Math.round(angle1Deg / 15) % 24;
+    let position2 = Math.round(angle2Deg / 15) % 24;
+    position1 = (position1 + 1) % 24;
+    position2 = (position2 + 1) % 24;
+    position1 = position1 === 0 ? 24 : position1;
+    position2 = position2 === 0 ? 24 : position2;
+    let checkIndex1 = Math.abs(combination[0] - position1) <= 0.5 || Math.abs(combination[0] - position1) >= 23.5;
+    let checkIndex2 = Math.abs(combination[1] - position2) <= 0.5 || Math.abs(combination[1] - position2) >= 23.5;
+  
+    if (checkIndex1 && checkIndex2) {
+        document.getElementById('ergebnis').innerHTML='Richtig!';
+    } else {
+      console.log('Falsche Kombination');
+      document.getElementById('ergebnis').innerHTML="Falsche Kombination";
+    }
+  });
+  });
+</script>
